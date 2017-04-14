@@ -2,8 +2,9 @@ package main
 
 import (
 	"bufio"
-	"log"
+	"bytes"
 	"fmt"
+	"log"
 	"os"
 	"os/exec"
 	"runtime"
@@ -14,7 +15,7 @@ import (
 
 var (
 	NumCPU         = runtime.NumCPU()
-	CPUs, PrevCpus [][10]int64
+	CPUs, PrevCPUs [][10]int64
 )
 
 const (
@@ -44,7 +45,7 @@ func procStat() string {
 	for scanner.Scan() {
 		if _, err := fmt.Sscanf(scanner.Text(), "%s %d %d %d %d %d %d %d %d %d %d",
 			&cpu, &user, &nice, &system, &idle, &iowait, &irq, &soft_irq, &steal, &guest, &guest_nice); err != nil {
-			return "CPU"
+			return "CPU -"
 		}
 		if strings.HasPrefix(cpu, "cpu") {
 			cpuN := cpu[3:]
@@ -54,7 +55,7 @@ func procStat() string {
 			}
 			n, err := strconv.Atoi(cpuN)
 			if err != nil {
-				return "CPU"
+				return "CPU -"
 			}
 			curr := &CPUs[n]
 			curr[USER_I] = user
@@ -73,16 +74,56 @@ func procStat() string {
 			}
 		}
 	}
-	for i, o := range CPUs {
-		log.Printf("CPU %d: %+v\n", i, o)
+	usages := calcCpuUsages()
+	defer moveCurrentStatToPrev()
+	return fmt.Sprintf("CPU %s", usages)
+}
+
+// based on https://stackoverflow.com/questions/23367857/
+func calcCpuUsages() string {
+	var buf bytes.Buffer
+	for i := 0; i < NumCPU; i++ {
+		prev := PrevCPUs[i]
+		curr := CPUs[i]
+
+		prevIdle := prev[IDLE_I] + prev[IOWAIT_I]
+		currIdle := curr[IDLE_I] + curr[IOWAIT_I]
+		prevNonIdle := prev[USER_I] + prev[NICE_I] + prev[SYSTEM_I] + prev[IRQ_I] + prev[SOFT_IRQ_I] + prev[STEAL_I]
+		currNonIdle := curr[USER_I] + curr[NICE_I] + curr[SYSTEM_I] + curr[IRQ_I] + curr[SOFT_IRQ_I] + curr[STEAL_I]
+		prevTotal := prevIdle + prevNonIdle
+		currTotal := currIdle + currNonIdle
+
+		totald := currTotal - prevTotal
+		idled := currIdle - prevIdle
+
+		percentage := float64(totald-idled) / float64(totald)
+
+		log.Printf("CPU %d: %f", i, percentage)
 	}
 
-	return fmt.Sprintf("CPU")
+	return buf.String()
+}
+
+func moveCurrentStatToPrev() {
+	for i := 0; i < NumCPU; i++ {
+		prev := &PrevCPUs[i]
+		curr := CPUs[i]
+		prev[USER_I] = curr[USER_I]
+		prev[NICE_I] = curr[NICE_I]
+		prev[SYSTEM_I] = curr[SYSTEM_I]
+		prev[IDLE_I] = curr[IDLE_I]
+		prev[IOWAIT_I] = curr[IOWAIT_I]
+		prev[IRQ_I] = curr[IRQ_I]
+		prev[SOFT_IRQ_I] = curr[SOFT_IRQ_I]
+		prev[STEAL_I] = curr[STEAL_I]
+		prev[GUEST_I] = curr[GUEST_I]
+		prev[GUEST_NICE_I] = curr[GUEST_NICE_I]
+	}
 }
 
 func main() {
 	CPUs = make([][10]int64, NumCPU)
-	PrevCpus = make([][10]int64, NumCPU)
+	PrevCPUs = make([][10]int64, NumCPU)
 	for {
 		var status = []string{
 			procStat(),
