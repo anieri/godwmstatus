@@ -4,7 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
-	"log"
+	"math"
 	"os"
 	"os/exec"
 	"runtime"
@@ -97,8 +97,11 @@ func calcCpuUsages() string {
 		idled := currIdle - prevIdle
 
 		percentage := float64(totald-idled) / float64(totald)
-
-		log.Printf("CPU %d: %f", i, percentage)
+		displayUsage := int(math.Floor(percentage*10))
+		if displayUsage == 10 {
+			displayUsage = 9
+		}
+		buf.WriteString(strconv.Itoa(displayUsage))
 	}
 
 	return buf.String()
