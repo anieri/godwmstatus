@@ -2,7 +2,7 @@
 
 ## Summary
 
-This is a remake of [schachmat's "gods"][https://github.com/schachmat/gods].
+This is a clone of [schachmats repo][https://github.com/schachmat/gods].
 It is a dwm status script that displays date/time, cpu usage, memory 
 consumption, and network transfer speeds.
 
