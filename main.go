@@ -147,12 +147,48 @@ func moveCurrentStatToPrev() {
 	}
 }
 
+func procMeminfo() string {
+	var file, err = os.Open("/proc/meminfo")
+	if err != nil {
+		return "MEM -"
+	}
+	defer file.Close()
+
+	var total, used, done int
+
+	scanner := bufio.NewScanner(file)
+	for done != 15 && scanner.Scan() {
+		var prop, val = "", 0
+		if _, err = fmt.Sscanf(scanner.Text(), "%s %d", &prop, &val); err != nil {
+			return "MEM -"
+		}
+		switch prop {
+		case "MemTotal:":
+			total = val
+			used += val
+			done |= 1
+		case "MemFree:":
+			used -= val
+			done |= 2
+		case "Buffers:":
+			used -= val
+			done |= 4
+		case "Cached:":
+			used -= val
+			done |= 8
+		}
+	}
+	percentage := used * 100 / total
+	return fmt.Sprintf("MEM%c%3d%%%c", getColor(percentage), percentage, NO_COLOR)
+}
+
 func main() {
 	CPUs = make([][10]int64, NumCPU)
 	PrevCPUs = make([][10]int64, NumCPU)
 	for {
 		var status = []string{
 			procStat(),
+			procMeminfo(),
 			time.Now().Local().Format("Mon 02 Jan 2006 | 15:04:05"),
 		}
 		exec.Command("xsetroot", "-name", strings.Join(status, "")).Run()
