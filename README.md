@@ -8,9 +8,7 @@ consumption, and network transfer speeds.
 
 ## Dependencies
 
-Only a working Go environment and the xsetroot binary is needed.
-The dwm's [statuscolor patch](http://dwm.suckless.org/patches/statuscolors) 
-is recommended.
+Only a working Go environment and the xsetroot binary are needed.
 
 ## Usage
 

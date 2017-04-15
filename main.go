@@ -31,30 +31,10 @@ const (
 	GUEST_NICE_I
 )
 
-const (
-	NO_COLOR = '\x01'
-	L1_COLOR = '\x02'
-	L2_COLOR = '\x03'
-	L3_COLOR = '\x04'
-)
-
-func getColor(level int) rune {
-	switch {
-	case level >= 90:
-		return L3_COLOR
-	case level >= 50:
-		return L2_COLOR
-	case level >= 30:
-		return L1_COLOR
-	default:
-		return NO_COLOR
-	}
-}
-
 func procStat() string {
 	file, err := os.Open("/proc/stat")
 	if err != nil {
-		return "  CPU -"
+		return " CPU - "
 	}
 	defer file.Close()
 
@@ -65,7 +45,7 @@ func procStat() string {
 	for scanner.Scan() {
 		if _, err := fmt.Sscanf(scanner.Text(), "%s %d %d %d %d %d %d %d %d %d %d",
 			&cpu, &user, &nice, &system, &idle, &iowait, &irq, &soft_irq, &steal, &guest, &guest_nice); err != nil {
-			return "  CPU -"
+			return " CPU - "
 		}
 		if strings.HasPrefix(cpu, "cpu") {
 			cpuN := cpu[3:]
@@ -75,7 +55,7 @@ func procStat() string {
 			}
 			n, err := strconv.Atoi(cpuN)
 			if err != nil {
-				return "  CPU -"
+				return " CPU - "
 			}
 			curr := &CPUs[n]
 			curr[USER_I] = user
@@ -95,7 +75,7 @@ func procStat() string {
 		}
 	}
 	defer moveCurrentStatToPrev()
-	return fmt.Sprintf("  CPU%s", calcCpuUsages())
+	return fmt.Sprintf(" CPU%s ", calcCpuUsages())
 }
 
 // based on https://stackoverflow.com/questions/23367857/
@@ -124,9 +104,7 @@ func calcCpuUsages() string {
 		total += percentage
 		buf.WriteString(strconv.Itoa(displayUsage))
 	}
-	buf.WriteRune(NO_COLOR)
-	color := getColor(int(math.Floor(total * 100 / float64(NumCPU))))
-	return string(color) + buf.String()
+	return fmt.Sprintf("%5.1f%% %s", total*100/float64(NumCPU), buf.String())
 }
 
 func moveCurrentStatToPrev() {
@@ -149,7 +127,7 @@ func moveCurrentStatToPrev() {
 func procMeminfo() string {
 	var file, err = os.Open("/proc/meminfo")
 	if err != nil {
-		return "  MEM -"
+		return " MEM - "
 	}
 	defer file.Close()
 
@@ -159,7 +137,7 @@ func procMeminfo() string {
 	for done != 15 && scanner.Scan() {
 		var prop, val = "", 0
 		if _, err = fmt.Sscanf(scanner.Text(), "%s %d", &prop, &val); err != nil {
-			return "  MEM -"
+			return " MEM - "
 		}
 		switch prop {
 		case "MemTotal:":
@@ -178,7 +156,7 @@ func procMeminfo() string {
 		}
 	}
 	percentage := used * 100 / total
-	return fmt.Sprintf("  MEM%c%3d%%%c", getColor(percentage), percentage, NO_COLOR)
+	return fmt.Sprintf(" MEM%3d%% ", percentage)
 }
 
 const (
@@ -253,7 +231,7 @@ func main() {
 			procNetDev(),
 			procStat(),
 			procMeminfo(),
-			time.Now().Local().Format("  Mon 02 Jan 2006  |  15:04:05"),
+			time.Now().Local().Format(" Mon 02.01.2006 | 15:04:05"),
 		}
 		exec.Command("xsetroot", "-name", strings.Join(status, "|")).Run()
 		var now = time.Now()
