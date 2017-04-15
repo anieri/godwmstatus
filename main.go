@@ -54,7 +54,7 @@ func getColor(level int) rune {
 func procStat() string {
 	file, err := os.Open("/proc/stat")
 	if err != nil {
-		return "CPU -"
+		return "  CPU -"
 	}
 	defer file.Close()
 
@@ -65,7 +65,7 @@ func procStat() string {
 	for scanner.Scan() {
 		if _, err := fmt.Sscanf(scanner.Text(), "%s %d %d %d %d %d %d %d %d %d %d",
 			&cpu, &user, &nice, &system, &idle, &iowait, &irq, &soft_irq, &steal, &guest, &guest_nice); err != nil {
-			return "CPU -"
+			return "  CPU -"
 		}
 		if strings.HasPrefix(cpu, "cpu") {
 			cpuN := cpu[3:]
@@ -75,7 +75,7 @@ func procStat() string {
 			}
 			n, err := strconv.Atoi(cpuN)
 			if err != nil {
-				return "CPU -"
+				return "  CPU -"
 			}
 			curr := &CPUs[n]
 			curr[USER_I] = user
@@ -95,7 +95,7 @@ func procStat() string {
 		}
 	}
 	defer moveCurrentStatToPrev()
-	return fmt.Sprintf("CPU%s", calcCpuUsages())
+	return fmt.Sprintf("  CPU%s", calcCpuUsages())
 }
 
 // based on https://stackoverflow.com/questions/23367857/
@@ -181,11 +181,82 @@ func procMeminfo() string {
 	return fmt.Sprintf("  MEM%c%3d%%%c", getColor(percentage), percentage, NO_COLOR)
 }
 
+const (
+	RX = "↓"
+	TX = "↑"
+)
+
+var (
+	NetDevs = map[string]struct{}{
+		"enp5s0:": {},
+		"enp3s5:": {},
+	}
+	prevRX, prevTX int64
+)
+
+func procNetDev() string {
+	file, err := os.Open("/proc/net/dev")
+	if err != nil {
+		return fmt.Sprintf("%s - %s - ", RX, TX)
+	}
+	defer file.Close()
+
+	var dev string
+	var rx, tx, currRX, currTX, void int64
+
+	var scanner = bufio.NewScanner(file)
+	for scanner.Scan() {
+		if _, err = fmt.Sscanf(scanner.Text(), "%s %d %d %d %d %d %d %d %d %d",
+			&dev, &rx, &void, &void, &void, &void, &void, &void, &void, &tx); err != nil {
+			continue
+		}
+		if _, ok := NetDevs[dev]; ok {
+			currRX += rx
+			currTX += tx
+		}
+	}
+
+	defer func() { prevRX, prevTX = currRX, currTX }()
+	return fmt.Sprintf("%s%s", fixed(RX, currRX-prevRX), fixed(TX, currTX-prevTX))
+}
+
+func fixed(prefix string, rate int64) string {
+	if rate < 0 {
+		return fmt.Sprintf("%s -", prefix)
+	}
+
+	var decDigit int64
+	suffix := "B"
+	color := NO_COLOR
+
+	switch {
+	case rate >= (1000 * 1024):
+		decDigit = (rate / 1024 / 102) % 10
+		rate /= (1024 * 1024)
+		suffix = "M"
+		color = L2_COLOR
+	case rate >= 1000:
+		decDigit = (rate / 102) % 10
+		rate /= 1024
+		suffix = "K"
+		color = L1_COLOR
+	}
+
+	var formatted string
+	if rate >= 100 {
+		formatted = fmt.Sprintf("%4d", rate)
+	} else {
+		formatted = fmt.Sprintf("%2d.%1d", rate, decDigit)
+	}
+	return fmt.Sprintf("%c%s%s%s%c", color, prefix, formatted, suffix, NO_COLOR)
+}
+
 func main() {
 	CPUs = make([][10]int64, NumCPU)
 	PrevCPUs = make([][10]int64, NumCPU)
 	for {
 		var status = []string{
+			procNetDev(),
 			procStat(),
 			procMeminfo(),
 			time.Now().Local().Format("  Mon 02 Jan 2006  |  15:04:05"),
