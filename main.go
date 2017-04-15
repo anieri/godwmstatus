@@ -94,9 +94,8 @@ func procStat() string {
 			}
 		}
 	}
-	usages := calcCpuUsages()
 	defer moveCurrentStatToPrev()
-	return fmt.Sprintf("CPU%s", usages)
+	return fmt.Sprintf("CPU%s", calcCpuUsages())
 }
 
 // based on https://stackoverflow.com/questions/23367857/
@@ -150,7 +149,7 @@ func moveCurrentStatToPrev() {
 func procMeminfo() string {
 	var file, err = os.Open("/proc/meminfo")
 	if err != nil {
-		return "MEM -"
+		return "  MEM -"
 	}
 	defer file.Close()
 
@@ -160,7 +159,7 @@ func procMeminfo() string {
 	for done != 15 && scanner.Scan() {
 		var prop, val = "", 0
 		if _, err = fmt.Sscanf(scanner.Text(), "%s %d", &prop, &val); err != nil {
-			return "MEM -"
+			return "  MEM -"
 		}
 		switch prop {
 		case "MemTotal:":
@@ -179,7 +178,7 @@ func procMeminfo() string {
 		}
 	}
 	percentage := used * 100 / total
-	return fmt.Sprintf("MEM%c%3d%%%c", getColor(percentage), percentage, NO_COLOR)
+	return fmt.Sprintf("  MEM%c%3d%%%c", getColor(percentage), percentage, NO_COLOR)
 }
 
 func main() {
@@ -189,9 +188,9 @@ func main() {
 		var status = []string{
 			procStat(),
 			procMeminfo(),
-			time.Now().Local().Format("Mon 02 Jan 2006 | 15:04:05"),
+			time.Now().Local().Format("  Mon 02 Jan 2006  |  15:04:05"),
 		}
-		exec.Command("xsetroot", "-name", strings.Join(status, "")).Run()
+		exec.Command("xsetroot", "-name", strings.Join(status, "|")).Run()
 		var now = time.Now()
 		time.Sleep(now.Truncate(time.Second).Add(time.Second).Sub(now))
 	}
