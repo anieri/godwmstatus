@@ -217,7 +217,7 @@ func procNetDev() string {
 	}
 
 	defer func() { prevRX, prevTX = currRX, currTX }()
-	return fmt.Sprintf("%s%s", fixed(RX, currRX-prevRX), fixed(TX, currTX-prevTX))
+	return fmt.Sprintf("%s  %s  ", fixed(RX, currRX-prevRX), fixed(TX, currTX-prevTX))
 }
 
 func fixed(prefix string, rate int64) string {
@@ -227,28 +227,22 @@ func fixed(prefix string, rate int64) string {
 
 	var decDigit int64
 	suffix := "B"
-	color := NO_COLOR
 
 	switch {
 	case rate >= (1000 * 1024):
 		decDigit = (rate / 1024 / 102) % 10
 		rate /= (1024 * 1024)
 		suffix = "M"
-		color = L2_COLOR
 	case rate >= 1000:
 		decDigit = (rate / 102) % 10
 		rate /= 1024
 		suffix = "K"
-		color = L1_COLOR
 	}
 
-	var formatted string
 	if rate >= 100 {
-		formatted = fmt.Sprintf("%4d", rate)
-	} else {
-		formatted = fmt.Sprintf("%2d.%1d", rate, decDigit)
+		return fmt.Sprintf("%s%4d%s", prefix, rate, suffix)
 	}
-	return fmt.Sprintf("%c%s%s%s%c", color, prefix, formatted, suffix, NO_COLOR)
+	return fmt.Sprintf("%s%2d.%1d%s", prefix, rate, decDigit, suffix)
 }
 
 func main() {
