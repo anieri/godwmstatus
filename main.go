@@ -31,6 +31,26 @@ const (
 	GUEST_NICE_I
 )
 
+const (
+	NO_COLOR = '\x01'
+	L1_COLOR = '\x02'
+	L2_COLOR = '\x03'
+	L3_COLOR = '\x04'
+)
+
+func getColor(level int) rune {
+	switch {
+	case level >= 90:
+		return L3_COLOR
+	case level >= 50:
+		return L2_COLOR
+	case level >= 30:
+		return L1_COLOR
+	default:
+		return NO_COLOR
+	}
+}
+
 func procStat() string {
 	file, err := os.Open("/proc/stat")
 	if err != nil {
@@ -76,12 +96,13 @@ func procStat() string {
 	}
 	usages := calcCpuUsages()
 	defer moveCurrentStatToPrev()
-	return fmt.Sprintf("CPU %s", usages)
+	return fmt.Sprintf("CPU%s", usages)
 }
 
 // based on https://stackoverflow.com/questions/23367857/
 func calcCpuUsages() string {
 	var buf bytes.Buffer
+	var total float64
 	for i := 0; i < NumCPU; i++ {
 		prev := PrevCPUs[i]
 		curr := CPUs[i]
@@ -97,14 +118,16 @@ func calcCpuUsages() string {
 		idled := currIdle - prevIdle
 
 		percentage := float64(totald-idled) / float64(totald)
-		displayUsage := int(math.Floor(percentage*10))
+		displayUsage := int(math.Floor(percentage * 10))
 		if displayUsage == 10 {
 			displayUsage = 9
 		}
+		total += percentage
 		buf.WriteString(strconv.Itoa(displayUsage))
 	}
-
-	return buf.String()
+	buf.WriteRune(NO_COLOR)
+	color := getColor(int(math.Floor(total * 100 / float64(NumCPU))))
+	return string(color) + buf.String()
 }
 
 func moveCurrentStatToPrev() {
@@ -132,7 +155,7 @@ func main() {
 			procStat(),
 			time.Now().Local().Format("Mon 02 Jan 2006 | 15:04:05"),
 		}
-		exec.Command("xsetroot", "-name", strings.Join(status, " ")).Run()
+		exec.Command("xsetroot", "-name", strings.Join(status, "")).Run()
 		var now = time.Now()
 		time.Sleep(now.Truncate(time.Second).Add(time.Second).Sub(now))
 	}
