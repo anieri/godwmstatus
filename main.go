@@ -275,16 +275,32 @@ func batteryStatus() string {
 	return " BAT - "
 }
 
+func throttle(rate int, fn func() string) func() string {
+	previousResult := ""
+	currentI := 0
+	return func() string {
+		if ((currentI % rate) == 0) {
+			previousResult = fn()
+		}
+		currentI++
+		return previousResult
+	}
+}
+
 func main() {
 	CPUs = make([][10]int64, NumCPU)
 	PrevCPUs = make([][10]int64, NumCPU)
+
+	_amixerVolume := throttle(10, amixerVolume)
+	_batteryStatus := throttle(90, batteryStatus)
+
 	for {
 		var status = []string{
 			procNetDev(),
 			procStat(),
 			procMeminfo(),
-			amixerVolume(),
-			batteryStatus(),
+			_amixerVolume(),
+			_batteryStatus(),
 			time.Now().Local().Format(" Mon 02.01.2006 | 15:04:05"),
 		}
 		exec.Command("xsetroot", "-name", strings.Join(status, "|")).Run()
