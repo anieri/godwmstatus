@@ -256,6 +256,25 @@ func amixerVolume() string {
 	return fmt.Sprintf(" VOL %d%% ", totalVolume/nVolume)
 }
 
+func batteryStatus() string {
+	out, err := exec.Command("sh", "-c", "upower -i /org/freedesktop/UPower/devices/battery_BAT1 | grep percentage").CombinedOutput()
+	if err != nil {
+		fmt.Printf("Error: %v\n", err)
+		return " BAT - "
+	}
+
+	var percentage, void string
+	scanner := bufio.NewScanner(bytes.NewReader(out))
+	for scanner.Scan() {
+		if _, err := fmt.Sscanf(scanner.Text(), "%s %s", &void, &percentage); err != nil {
+			fmt.Printf("Error: %v\n", err)
+			return " BAT - "
+		}
+		return fmt.Sprintf(" BAT %s ", percentage)
+	}
+	return " BAT - "
+}
+
 func main() {
 	CPUs = make([][10]int64, NumCPU)
 	PrevCPUs = make([][10]int64, NumCPU)
@@ -265,6 +284,7 @@ func main() {
 			procStat(),
 			procMeminfo(),
 			amixerVolume(),
+			batteryStatus(),
 			time.Now().Local().Format(" Mon 02.01.2006 | 15:04:05"),
 		}
 		exec.Command("xsetroot", "-name", strings.Join(status, "|")).Run()
