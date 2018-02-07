@@ -167,8 +167,8 @@ const (
 
 var (
 	NetDevs = map[string]struct{}{
-		"enp5s0:": {},
-		"enp3s5:": {},
+		"enp2s0:": {},
+		"wlp3s0:": {},
 	}
 	prevRX, prevTX int64
 )
@@ -257,7 +257,7 @@ func amixerVolume() string {
 }
 
 func batteryStatus() string {
-	out, err := exec.Command("sh", "-c", "upower -i /org/freedesktop/UPower/devices/battery_BAT1 | grep percentage").CombinedOutput()
+	out, err := exec.Command("sh", "-c", "upower -i /org/freedesktop/UPower/devices/battery_BAT0 | grep percentage").CombinedOutput()
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
 		return " BAT - "
@@ -270,6 +270,14 @@ func batteryStatus() string {
 			fmt.Printf("Error: %v\n", err)
 			return " BAT - "
 		}
+		if i, err := strconv.ParseInt(percentage[:len(percentage)-1], 10, 32); err == nil {
+			switch {
+			case i < 10:
+				return fmt.Sprintf(" CRITICAL BAT %s ", percentage)
+			case i < 30:
+				return fmt.Sprintf(" WARNING BAT %s ", percentage)
+			}
+		}
 		return fmt.Sprintf(" BAT %s ", percentage)
 	}
 	return " BAT - "
@@ -279,7 +287,7 @@ func throttle(rate int, fn func() string) func() string {
 	previousResult := ""
 	currentI := 0
 	return func() string {
-		if ((currentI % rate) == 0) {
+		if (currentI % rate) == 0 {
 			previousResult = fn()
 		}
 		currentI++
