@@ -98,12 +98,13 @@ func calcCpuUsages() string {
 		idled := currIdle - prevIdle
 
 		percentage := float64(totald-idled) / float64(totald)
-		displayUsage := int(math.Floor(percentage * 10))
+		displayUsage := int64(math.Floor(percentage * 10))
 		if displayUsage == 10 {
-			displayUsage = 9
+			buf.WriteRune('X')
+		} else {
+			buf.WriteString(strconv.FormatInt(displayUsage, 10))
 		}
 		total += percentage
-		buf.WriteString(strconv.Itoa(displayUsage))
 	}
 	return fmt.Sprintf("%5.1f%% %s", total*100/float64(NumCPU), buf.String())
 }
