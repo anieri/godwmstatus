@@ -20,7 +20,7 @@ func throttle(rate int, fn func() string) func() string {
 
 func main() {
 	_amixerVolume := throttle(10, amixerVolume)
-	_batteryStatus := throttle(90, batteryStatus)
+	_batteryStatus := throttle(90, batteryStatus("/org/freedesktop/UPower/devices/battery_BAT0"))
 
 	for {
 		var status = []string{

@@ -14,7 +14,7 @@ var (
 )
 
 func amixerVolume() string {
-	out, err := exec.Command("sh", "-c", "amixer sget Master").CombinedOutput()
+	out, err := exec.Command("amixer", "sget", "Master").CombinedOutput()
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
 		return " VOL - "

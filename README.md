@@ -1,14 +1,14 @@
-# gods
+# godwmstatus
 
 ## Summary
 
 This is a remake of [schachmat's "gods"](https://github.com/schachmat/gods).
-It is a dwm status script that displays date/time, cpu usage, memory 
+It is a dwm status script that displays date/time, cpu usage, memory
 consumption, and network transfer speeds.
 
 ## Dependencies
 
-Only a working Go environment and the xsetroot binary are needed.
+A working Go environment and the xsetroot binary.
 
 ## Usage
 
