@@ -83,8 +83,12 @@ func readCharging(line string) string {
 		return "BAT"
 	}
 
-	if chargingState == "charging" {
+	switch chargingState {
+	case "charging":
 		return "PLG"
+	case "fully-charged":
+		return "FUL"
+	default:
+		return "BAT"
 	}
-	return "BAT"
 }
